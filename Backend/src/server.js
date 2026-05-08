@@ -18,7 +18,7 @@ const workspaceRoutes = require('./routes/workspace.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/worksapce', workspaceRoutes);
+app.use('/api/workspaces', workspaceRoutes);
 
 
 // Health check endpoint to verify the server is running
