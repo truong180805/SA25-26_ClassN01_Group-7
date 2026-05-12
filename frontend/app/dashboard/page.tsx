@@ -1,5 +1,6 @@
 "use client";
 
+import TaskTab from "../components/TaskTab";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../store/useAuthStore";
@@ -131,7 +132,7 @@ export default function DashboardPage() {
       case "workspaces":
         return <div><h2 className="text-2xl font-bold text-gray-800">Quản lý Workspaces</h2><p className="text-gray-500 mt-2">Tính năng thêm, sửa, xóa Workspace sẽ được đặt tại đây.</p></div>;
       case "tasks":
-        return <div><h2 className="text-2xl font-bold text-gray-800">Quản lý Tác vụ</h2><p className="text-gray-500 mt-2">Giao diện Kanban/Danh sách task và sub-task sẽ hiển thị ở đây.</p></div>;
+        return <TaskTab/>;
       case "notes":
         return <div><h2 className="text-2xl font-bold text-gray-800">Ghi chú & Nhắc nhở</h2><p className="text-gray-500 mt-2">Trang ghi chú Markdown sẽ hiển thị ở đây.</p></div>;
       case "settings":
