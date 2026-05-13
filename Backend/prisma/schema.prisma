@@ -108,6 +108,7 @@ model Task {
 
   title       String
   content     String?   @db.Text
+  priority    String    @default("medium")
   startDate   DateTime?
   endDate     DateTime?
   isCompleted Boolean   @default(false) // Tích hoàn thành
@@ -115,7 +116,7 @@ model Task {
 
   // Đệ quy: Sub-task (nhiệm vụ con của nhiệm vụ này)
   parentId String?
-  parent   Task?   @relation("TaskToSubTask", fields: [parentId], references: [id])
+  parent   Task?   @relation("TaskToSubTask", fields: [parentId], references: [id], onDelete: Cascade)
   subTasks Task[]  @relation("TaskToSubTask")
 
   createdAt DateTime @default(now())

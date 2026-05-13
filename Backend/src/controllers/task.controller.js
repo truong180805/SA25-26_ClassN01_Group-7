@@ -1,95 +1,129 @@
 const prisma = require('../config/prisma');
 
-// 1. Tạo Task (có thể là cha hoặc con)
+// 1. Tạo Task mới (Đã cập nhật để nhận projectId và workspaceId)
 const createTask = async (req, res) => {
   try {
-    const { userId, title, content, status, priority, progress, startDate, dueDate, parentId } = req.body;
+    const { userId, projectId, title, content, priority, dueDate, parentId, workspaceId, attachment } = req.body;
+
+    // Xác thực cơ bản
+    if (!userId || !projectId || !title) {
+      return res.status(400).json({ error: "Thiếu thông tin bắt buộc (userId, projectId hoặc title)." });
+    }
 
     const newTask = await prisma.task.create({
       data: {
         userId,
+        projectId,
         title,
         content,
-        status,
-        priority,
-        progress: progress || 0,
-        startDate: startDate ? new Date(startDate) : null,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        parentId: parentId || null, // Nếu có parentId, nó sẽ là sub-task
+        priority: priority || 'medium',
+        endDate: dueDate ? new Date(dueDate) : null, // Ánh xạ dueDate của Frontend thành endDate của DB
+        parentId: parentId || null,
+        workspaceId: workspaceId || null,
+        attachment: attachment || null,
+        isCompleted: false
       },
     });
 
     res.status(201).json(newTask);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi khi tạo công việc." });
+    console.error("Lỗi khi tạo Task:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi tạo công việc." });
   }
 };
 
-// 2. Lấy danh sách Task theo dạng cây (Tree Structure)
-const getTasksByUser = async (req, res) => {
+// 2. Lấy danh sách Task theo Project
+const getTasksByProject = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { projectId } = req.params;
 
-    // Lấy tất cả task của user
-    const allTasks = await prisma.task.findMany({
-      where: { userId },
+    const tasks = await prisma.task.findMany({
+      where: { projectId: projectId },
       orderBy: { createdAt: 'asc' }
     });
 
-    // Hàm bổ trợ để biến danh sách phẳng thành dạng cây lồng nhau
-    const buildTree = (tasks, parentId = null) => {
-      return tasks
-        .filter(t => t.parentId === parentId)
-        .map(t => ({
-          ...t,
-          subTasks: buildTree(tasks, t.id)
-        }));
-    };
+    // Định dạng lại dữ liệu trả về cho Frontend dễ dùng (đổi endDate thành dueDate)
+    const formattedTasks = tasks.map(task => ({
+      ...task,
+      dueDate: task.endDate
+    }));
 
-    const taskTree = buildTree(allTasks);
-    res.status(200).json(taskTree);
+    res.status(200).json(formattedTasks);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi khi tải danh sách công việc." });
+    console.error("Lỗi lấy danh sách task:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi tải nhiệm vụ." });
   }
 };
 
-// 3. Cập nhật Task
+// 3. Cập nhật Task (dùng cho tích hoàn thành hoặc sửa nội dung)
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const { dueDate, ...otherData } = req.body; // Tách dueDate ra khỏi các dữ liệu khác
 
-    // Chuyển đổi ngày tháng nếu có gửi lên
-    if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
-    if (updateData.dueDate) updateData.dueDate = new Date(updateData.dueDate);
+    // Chuyển đổi dueDate thành endDate cho Database hiểu
+    const updatePayload = { ...otherData };
+    if (dueDate !== undefined) {
+      updatePayload.endDate = dueDate ? new Date(dueDate) : null;
+    }
 
+    // Cập nhật Task hiện tại
     const updatedTask = await prisma.task.update({
       where: { id },
-      data: updateData,
+      data: updatePayload,
     });
+
+    // --- LOGIC TRIGGER BẬT/TẮT HOÀN THÀNH ---
+    if (otherData.isCompleted !== undefined) {
+      const isDone = otherData.isCompleted;
+
+      // 1. TRIGGER XUÔI (Cha -> Con)
+      const updateChildrenStatus = async (parentId, status) => {
+        const children = await prisma.task.findMany({ where: { parentId } });
+        for (const child of children) {
+          await prisma.task.update({ where: { id: child.id }, data: { isCompleted: status } });
+          await updateChildrenStatus(child.id, status);
+        }
+      };
+      await updateChildrenStatus(id, isDone);
+
+      // 2. TRIGGER NGƯỢC (Con -> Cha)
+      const checkAndUpdateParent = async (currentParentId) => {
+        if (!currentParentId) return; 
+
+        const siblings = await prisma.task.findMany({ where: { parentId: currentParentId } });
+        const isAllSiblingsDone = siblings.every(sibling => sibling.isCompleted);
+
+        const parent = await prisma.task.update({
+          where: { id: currentParentId },
+          data: { isCompleted: isAllSiblingsDone }
+        });
+
+        await checkAndUpdateParent(parent.parentId);
+      };
+
+      await checkAndUpdateParent(updatedTask.parentId);
+    }
 
     res.status(200).json(updatedTask);
   } catch (error) {
-    res.status(500).json({ error: "Lỗi khi cập nhật công việc." });
+    console.error("Lỗi cập nhật task:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi cập nhật." });
   }
 };
 
-// 4. Xóa Task (Xóa luôn cả các task con để tránh rác dữ liệu)
+// 4. Xóa Task
 const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Lưu ý: Trong thực tế nên dùng deleteRecursive hoặc cấu hình Cascade trong DB
-    // Ở đây ta xóa đơn giản Task hiện tại. 
-    // Nếu muốn xóa sạch con, Prisma cần cài đặt Referencial Actions trong Schema.
     await prisma.task.delete({
       where: { id },
     });
-
-    res.status(200).json({ message: "Đã xóa công việc." });
+    res.status(200).json({ message: "Xóa thành công." });
   } catch (error) {
-    res.status(500).json({ error: "Lỗi khi xóa công việc." });
+    console.error("Lỗi xóa task:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi xóa." });
   }
 };
 
-module.exports = { createTask, getTasksByUser, updateTask, deleteTask };
+module.exports = { createTask, getTasksByProject, updateTask, deleteTask };
