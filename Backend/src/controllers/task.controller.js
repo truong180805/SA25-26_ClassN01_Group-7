@@ -59,27 +59,35 @@ const getTasksByProject = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { dueDate, ...otherData } = req.body; // Tách dueDate ra khỏi các dữ liệu khác
+    const { dueDate, isPinned, isCompleted, title, content, priority, parentId } = req.body;
 
-    // Chuyển đổi dueDate thành endDate cho Database hiểu
-    const updatePayload = { ...otherData };
+    // 1. Chỉ cập nhật những trường được gửi lên từ Frontend
+    const updatePayload = {};
+    if (title !== undefined) updatePayload.title = title;
+    if (content !== undefined) updatePayload.content = content;
+    if (priority !== undefined) updatePayload.priority = priority;
+    if (parentId !== undefined) updatePayload.parentId = parentId;
+    if (isPinned !== undefined) updatePayload.isPinned = isPinned;
+    if (isCompleted !== undefined) updatePayload.isCompleted = isCompleted;
+    
+    // Ánh xạ dueDate thành endDate cho Prisma
     if (dueDate !== undefined) {
       updatePayload.endDate = dueDate ? new Date(dueDate) : null;
     }
 
-    // Cập nhật Task hiện tại
+    // 2. Lưu vào Database
     const updatedTask = await prisma.task.update({
       where: { id },
       data: updatePayload,
     });
 
-    // --- LOGIC TRIGGER BẬT/TẮT HOÀN THÀNH ---
-    if (otherData.isCompleted !== undefined) {
-      const isDone = otherData.isCompleted;
+    // 3. TRIGGER: Đệ quy trạng thái hoàn thành (Chỉ chạy khi có gửi isCompleted)
+    if (isCompleted !== undefined) {
+      const isDone = isCompleted;
 
-      // 1. TRIGGER XUÔI (Cha -> Con)
-      const updateChildrenStatus = async (parentId, status) => {
-        const children = await prisma.task.findMany({ where: { parentId } });
+      // Trigger Xuôi: Cha xong -> Con xong
+      const updateChildrenStatus = async (pId, status) => {
+        const children = await prisma.task.findMany({ where: { parentId: pId } });
         for (const child of children) {
           await prisma.task.update({ where: { id: child.id }, data: { isCompleted: status } });
           await updateChildrenStatus(child.id, status);
@@ -87,28 +95,27 @@ const updateTask = async (req, res) => {
       };
       await updateChildrenStatus(id, isDone);
 
-      // 2. TRIGGER NGƯỢC (Con -> Cha)
+      // Trigger Ngược: Con xong -> Cha xong
       const checkAndUpdateParent = async (currentParentId) => {
-        if (!currentParentId) return; 
-
+        if (!currentParentId) return;
         const siblings = await prisma.task.findMany({ where: { parentId: currentParentId } });
-        const isAllSiblingsDone = siblings.every(sibling => sibling.isCompleted);
-
+        // Nếu danh sách không rỗng và tất cả đều xong thì cha xong
+        const isAllSiblingsDone = siblings.length > 0 && siblings.every(sibling => sibling.isCompleted);
+        
         const parent = await prisma.task.update({
           where: { id: currentParentId },
           data: { isCompleted: isAllSiblingsDone }
         });
-
         await checkAndUpdateParent(parent.parentId);
       };
-
       await checkAndUpdateParent(updatedTask.parentId);
     }
 
     res.status(200).json(updatedTask);
   } catch (error) {
     console.error("Lỗi cập nhật task:", error);
-    res.status(500).json({ error: "Lỗi hệ thống khi cập nhật." });
+    // Trả về chi tiết lỗi để dễ debug thay vì báo chung chung
+    res.status(500).json({ error: error.message || "Lỗi hệ thống khi cập nhật." });
   }
 };
 

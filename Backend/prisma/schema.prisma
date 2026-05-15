@@ -109,6 +109,7 @@ model Task {
   title       String
   content     String?   @db.Text
   priority    String    @default("medium")
+  isPinned    Boolean   @default(false)
   startDate   DateTime?
   endDate     DateTime?
   isCompleted Boolean   @default(false) // Tích hoàn thành
