@@ -53,38 +53,54 @@ model User {
 }
 
 model Workspace {
-  id          String     @id @default(uuid()) @map("workspace_id")
-  userId      String     @map("user_id")
-  name        String     @db.VarChar(200)
-  icon        String?    @db.VarChar(50)
-  description String?    @db.Text
-  modeType    ActiveMode @map("mode_type")
-  isFavorite  Boolean    @default(false) @map("is_favorite")
-  createdAt   DateTime   @default(now()) @map("created_at")
+  id          String         @id @default(uuid())
+  
+  // FIX LỖI 1: Khai báo relation trỏ ngược về User
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relationships
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projects Project[]
+  name        String         // Tên không gian (VD: "Môi trường Code Frontend")
+  icon        String?        @default("Briefcase") // Icon đại diện
+  color       String?        @default("#3b82f6")   // Màu sắc phân biệt
+  
+  // Quan hệ: Một Workspace chứa nhiều Tab
+  tabs        WorkspaceTab[]
+  
+  // Quan hệ: Một Workspace có thể được dùng cho nhiều Task hoặc Project
+  tasks       Task[]
+  projects    Project[]
 
-  @@map("workspaces")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model WorkspaceTab {
+  id          String         @id @default(uuid())
+  workspaceId String
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  title       String         // Tên của trang web (VD: "Figma - Design")
+  url         String         @db.Text // Đường dẫn (Lưu @db.Text vì URL có thể rất dài)
+  favicon     String?        @db.Text // Logo của trang web (tuỳ chọn)
+  orderIndex  Int            @default(0) // Thứ tự mở tab (1, 2, 3...)
 }
 
 // --- BẢNG 1: CÔNG VIỆC LỚN (PROJECT) ---
-// Tương ứng với danh sách hiển thị bên ngoài
 model Project {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  id          String @id @default(uuid())
+  
+  userId      String
+  user        User   @relation(fields: [userId], references: [id])
 
   workspaceId String? // Có thể gán vào 1 Workspace Combo (Tùy chọn)
   workspace   Workspace? @relation(fields: [workspaceId], references: [id])
 
-  title     String
-  content   String?   @db.Text
-  startDate DateTime?
-  endDate   DateTime? // Ngày kết thúc/Đến hạn
-  progress  Int       @default(0)
-  viewType  String    @default("list") // Loại cài đặt: "list" hoặc "sequence" (sơ đồ)
+  title       String
+  content     String?   @db.Text
+  startDate   DateTime?
+  endDate     DateTime? // Ngày kết thúc/Đến hạn
+  progress    Int       @default(0)
+  viewType    String    @default("list") // Loại cài đặt: "list" hoặc "sequence" (sơ đồ)
   isStrictSequence Boolean @default(false)
 
   tasks Task[] // Chứa nhiều nhiệm vụ bên trong
@@ -94,17 +110,18 @@ model Project {
 }
 
 // --- BẢNG 2: NHIỆM VỤ CHI TIẾT (TASK) ---
-// Nằm bên trong 1 Project cụ thể
 model Task {
-  id        String  @id @default(uuid())
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade) // Xóa công việc thì xóa luôn task
+  id          String  @id @default(uuid())
+  
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade) 
 
-  userId String
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
-
-  workspaceId String? // Có thể gán vào 1 Workspace cụ thể
+  // FIX LỖI 2: Khai báo relation trỏ ngược về Workspace
+  workspaceId String? 
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
 
   title       String
   content     String?   @db.Text
@@ -112,13 +129,17 @@ model Task {
   isPinned    Boolean   @default(false)
   startDate   DateTime?
   endDate     DateTime?
-  isCompleted Boolean   @default(false) // Tích hoàn thành
-  attachment  String? // Link file/minh chứng đính kèm (URL)
+  isCompleted Boolean   @default(false) 
+  attachment  String? 
 
   // Đệ quy: Sub-task (nhiệm vụ con của nhiệm vụ này)
-  parentId String?
-  parent   Task?   @relation("TaskToSubTask", fields: [parentId], references: [id], onDelete: Cascade)
-  subTasks Task[]  @relation("TaskToSubTask")
+  parentId    String?
+  parent      Task?     @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subTasks    Task[]    @relation("TaskHierarchy")
+
+  dependsOnId String?
+  dependsOn   Task?     @relation("TaskSequence", fields: [dependsOnId], references: [id])
+  nextTasks   Task[]    @relation("TaskSequence")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -3,16 +3,17 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { jwtDecode } from "jwt-decode";
 import { useAuthStore } from "../store/useAuthStore";
-import ReactFlow, { Background, Controls, MiniMap, Handle, Position, useNodesState, useEdgesState, addEdge } from 'reactflow';
+import ReactFlow, { Background, Controls, Handle, Position, useNodesState, useEdgesState, addEdge } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
-import { CheckCircle2, Circle, Plus, Trash2, Edit2, X, Zap, Lock } from 'lucide-react'; // <-- Thêm Lock
+import { CheckCircle2, Circle, Plus, Trash2, Edit2, X, Zap, Lock } from 'lucide-react';
 import TaskDetailDrawer from "./TaskDetailDrawer";
 
 interface Task {
   id: string; title: string; content: string | null;
   priority: string; dueDate: string | null;
   isCompleted: boolean; parentId: string | null;
+  dependsOnId?: string | null; // Cần thiết để lưu móc nối
   isPinned: boolean; createdAt: string;
 }
 
@@ -90,9 +91,10 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
     setIsEditModalOpen(true);
   };
 
+  // Nối dây bằng dependsOnId
   const onConnect = useCallback(async (params: any) => {
     try {
-      await fetch(`http://localhost:5000/api/tasks/${params.target}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ parentId: params.source }) });
+      await fetch(`http://localhost:5000/api/tasks/${params.target}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dependsOnId: params.source }) });
       setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } }, eds));
       setTimeout(() => onRefresh(), 500); 
     } catch (error) { console.error(error); }
@@ -102,27 +104,24 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
     setViewingTask(node.data.task);
   }, []);
 
-  // --- CẬP NHẬT UI CUSTOM NODE ĐỂ HIỂN THỊ KHÓA ---
   const CustomNode = ({ data }: any) => {
-    const { task, isLocked } = data;
+    const { task, isLocked, subTaskCount } = data;
     
     return (
       <div style={{ width: '280px', height: '120px' }} className={`bg-white rounded-2xl shadow-lg border-2 flex flex-col justify-between transition-all relative ${
-        task.isCompleted ? 'border-green-500 opacity-80' : 
-        isLocked ? 'border-gray-300 bg-gray-50 opacity-60' : // <-- Đổi màu nếu bị khóa
-        'border-blue-500 hover:shadow-blue-200 cursor-pointer'
+        task.isCompleted ? 'border-green-500 opacity-80' : isLocked ? 'border-gray-300 bg-gray-50 opacity-60' : 'border-blue-500 hover:shadow-blue-200 cursor-pointer'
       }`}>
         <Handle type="target" position={Position.Top} className="w-4 h-4 !bg-gray-300 border-2 border-white" />
         
         <div className="p-4 flex-1 flex flex-col justify-between">
           <div className="flex items-start justify-between gap-2">
-            {/* Vô hiệu hóa nút bấm nếu bị khóa */}
-            <button disabled={isLocked} onClick={() => { if(!isLocked) data.onToggle(task) }} className={`mt-0.5 shrink-0 transition-colors ${
-              task.isCompleted ? 'text-green-500' : isLocked ? 'text-gray-400 cursor-not-allowed' : 'text-gray-300 hover:text-blue-500'
-            }`}>
+            <button disabled={isLocked} onClick={() => { if(!isLocked) data.onToggle(task) }} className={`mt-0.5 shrink-0 transition-colors ${task.isCompleted ? 'text-green-500' : isLocked ? 'text-gray-400 cursor-not-allowed' : 'text-gray-300 hover:text-blue-500'}`}>
               {isLocked ? <Lock size={18} /> : task.isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
             </button>
-            <h4 className={`text-sm font-bold flex-1 truncate ${task.isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</h4>
+            <div className="flex-1 min-w-0">
+              <h4 className={`text-sm font-bold truncate ${task.isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</h4>
+              {subTaskCount > 0 && <span className="text-[10px] text-gray-500 font-medium">{subTaskCount} việc con</span>}
+            </div>
           </div>
 
           <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
@@ -141,37 +140,39 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
   const nodeTypes = useMemo(() => ({ customNode: CustomNode }), []);
 
   useEffect(() => {
-    if(tasks.length === 0) { setNodes([]); setEdges([]); return; }
+    // 1. CHỈ VẼ SƠ ĐỒ CHO TASK GỐC
+    const rootTasks = tasks.filter(t => !t.parentId);
+    if(rootTasks.length === 0) { setNodes([]); setEdges([]); return; }
     
-    const initialNodes = tasks.map(task => {
-      // TÍNH TOÁN LOGIC KHÓA Ở ĐÂY
-      const isLocked = isStrictSequence && task.parentId 
-        ? tasks.find(t => t.id === task.parentId)?.isCompleted === false 
+    const initialNodes = rootTasks.map(task => {
+      const isLocked = isStrictSequence && task.dependsOnId 
+        ? tasks.find(t => t.id === task.dependsOnId)?.isCompleted === false 
         : false;
+      const subTaskCount = tasks.filter(t => t.parentId === task.id).length;
 
       return {
         id: task.id, type: 'customNode', 
-        data: { task, isLocked, onToggle: toggleTaskStatus, onEdit: openEditModal, onDelete: deleteTask }, 
+        data: { task, isLocked, subTaskCount, onToggle: toggleTaskStatus, onEdit: openEditModal, onDelete: deleteTask }, 
         position: { x: 0, y: 0 }
       };
     });
     
-    const initialEdges = tasks.filter(t => t.parentId).map(t => ({
-      id: `e-${t.parentId}-${t.id}`, source: t.parentId, target: t.id, 
+    // 2. NỐI DÂY DỰA TRÊN dependsOnId
+    const initialEdges = rootTasks.filter(t => t.dependsOnId).map(t => ({
+      id: `e-${t.dependsOnId}-${t.id}`, source: t.dependsOnId, target: t.id, 
       animated: !t.isCompleted, style: { stroke: t.isCompleted ? '#22c55e' : '#3b82f6', strokeWidth: 2 }
     }));
     
     const layout = getLayoutedElements(initialNodes, initialEdges);
     setNodes(layout.nodes); setEdges(layout.edges);
-  }, [tasks, isStrictSequence]); // Thêm isStrictSequence vào dependency
+  }, [tasks, isStrictSequence]);
 
-  // ... (Giữ nguyên phần HTML return ở dưới vì không cần thay đổi UI Modal) ...
   return (
     <>
       <div className="mb-4 flex justify-between items-end">
-        <p className="text-sm text-gray-500 font-medium">💡 Hướng dẫn nhanh: Bấm Đúp vào thẻ để xem chi tiết. Cầm chấm xanh kéo nối vào chấm xám.</p>
+        <p className="text-sm text-gray-500 font-medium">💡 Bấm Đúp vào thẻ để xem chi tiết & việc con. Cầm chấm xanh nối dây vào chấm xám.</p>
         <button onClick={() => { setQuickAddParentId(null); setIsQuickAddOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center">
-          <Zap size={18} className="mr-2"/> Thêm Nhanh
+          <Zap size={18} className="mr-2"/> Thêm Nhanh Task Gốc
         </button>
       </div>
 
@@ -182,6 +183,7 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
         </ReactFlow>
       </div>
 
+      {/* QUICK ADD MODAL */}
       {isQuickAddOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 animate-in zoom-in-95">
@@ -196,6 +198,7 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
         </div>
       )}
 
+      {/* FORM SỬA ĐẦY ĐỦ */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
@@ -229,7 +232,20 @@ export default function TaskSequenceView({ tasks, onRefresh, projectId, isStrict
         </div>
       )}
 
-      <TaskDetailDrawer task={viewingTask} onClose={() => setViewingTask(null)} onToggleStatus={toggleTaskStatus} />
+      {/* THANH TRƯỢT CHI TIẾT (Đã bật công tắc showSubtasks) */}
+      <TaskDetailDrawer 
+        task={viewingTask} 
+        allTasks={tasks} 
+        showSubtasks={true} // BẬT HIỂN THỊ TASK CON
+        onClose={() => setViewingTask(null)} 
+        onToggleStatus={toggleTaskStatus} 
+        onEdit={(t) => {
+          setViewingTask(null); 
+          openEditModal(t);     
+        }}
+        onDelete={deleteTask}
+        onViewSubtask={(t) => setViewingTask(t)} 
+      />
     </>
   );
 }

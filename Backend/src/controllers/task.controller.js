@@ -59,63 +59,49 @@ const getTasksByProject = async (req, res) => {
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { dueDate, isPinned, isCompleted, title, content, priority, parentId } = req.body;
+    // Bóc tách dueDate ra khỏi body
+    const { isCompleted, dependsOnId, dueDate, ...otherData } = req.body;
 
-    // 1. Chỉ cập nhật những trường được gửi lên từ Frontend
-    const updatePayload = {};
-    if (title !== undefined) updatePayload.title = title;
-    if (content !== undefined) updatePayload.content = content;
-    if (priority !== undefined) updatePayload.priority = priority;
-    if (parentId !== undefined) updatePayload.parentId = parentId;
-    if (isPinned !== undefined) updatePayload.isPinned = isPinned;
+    const updatePayload = { ...otherData };
     if (isCompleted !== undefined) updatePayload.isCompleted = isCompleted;
+    if (dependsOnId !== undefined) updatePayload.dependsOnId = dependsOnId;
     
-    // Ánh xạ dueDate thành endDate cho Prisma
+    // Ánh xạ dueDate thành endDate cho Prisma hiểu
     if (dueDate !== undefined) {
       updatePayload.endDate = dueDate ? new Date(dueDate) : null;
     }
 
-    // 2. Lưu vào Database
     const updatedTask = await prisma.task.update({
       where: { id },
       data: updatePayload,
     });
 
-    // 3. TRIGGER: Đệ quy trạng thái hoàn thành (Chỉ chạy khi có gửi isCompleted)
+    // TRIGGER ĐỆ QUY (Chỉ dành cho Mẹ - Con)
     if (isCompleted !== undefined) {
-      const isDone = isCompleted;
-
-      // Trigger Xuôi: Cha xong -> Con xong
-      const updateChildrenStatus = async (pId, status) => {
-        const children = await prisma.task.findMany({ where: { parentId: pId } });
-        for (const child of children) {
-          await prisma.task.update({ where: { id: child.id }, data: { isCompleted: status } });
-          await updateChildrenStatus(child.id, status);
+      // 1. Xuôi: Mẹ xong -> Con xong
+      const updateSubtasks = async (pId, status) => {
+        const subs = await prisma.task.findMany({ where: { parentId: pId } });
+        for (const sub of subs) {
+          await prisma.task.update({ where: { id: sub.id }, data: { isCompleted: status } });
+          await updateSubtasks(sub.id, status);
         }
       };
-      await updateChildrenStatus(id, isDone);
+      await updateSubtasks(id, isCompleted);
 
-      // Trigger Ngược: Con xong -> Cha xong
-      const checkAndUpdateParent = async (currentParentId) => {
-        if (!currentParentId) return;
-        const siblings = await prisma.task.findMany({ where: { parentId: currentParentId } });
-        // Nếu danh sách không rỗng và tất cả đều xong thì cha xong
-        const isAllSiblingsDone = siblings.length > 0 && siblings.every(sibling => sibling.isCompleted);
-        
-        const parent = await prisma.task.update({
-          where: { id: currentParentId },
-          data: { isCompleted: isAllSiblingsDone }
-        });
-        await checkAndUpdateParent(parent.parentId);
+      // 2. Ngược: Tất cả con xong -> Mẹ xong
+      const checkParent = async (pId) => {
+        if (!pId) return;
+        const siblings = await prisma.task.findMany({ where: { parentId: pId } });
+        const allDone = siblings.length > 0 && siblings.every(s => s.isCompleted);
+        const parent = await prisma.task.update({ where: { id: pId }, data: { isCompleted: allDone } });
+        await checkParent(parent.parentId);
       };
-      await checkAndUpdateParent(updatedTask.parentId);
+      await checkParent(updatedTask.parentId);
     }
 
     res.status(200).json(updatedTask);
   } catch (error) {
-    console.error("Lỗi cập nhật task:", error);
-    // Trả về chi tiết lỗi để dễ debug thay vì báo chung chung
-    res.status(500).json({ error: error.message || "Lỗi hệ thống khi cập nhật." });
+    res.status(500).json({ error: error.message });
   }
 };
 
