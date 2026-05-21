@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 320px; padding: 15px; margin: 0; background: #f8fafc; }
+    h3 { margin-top: 0; color: #1e293b; font-size: 16px; }
+    input { width: 100%; margin-bottom: 10px; padding: 10px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+    input:focus { border-color: #3b82f6; }
+    button { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+    button:hover { background: #1d4ed8; }
+    #status { margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; }
+    .tab-list { margin-top: 15px; font-size: 12px; color: #64748b; max-height: 180px; overflow-y: auto; background: white; border-radius: 8px; padding: 5px 10px; border: 1px solid #e2e8f0; }
+    .tab-item { padding: 6px 0; border-bottom: 1px solid #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tab-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <h3>Lưu Workspace mới</h3>
+  
+  <input type="text" id="workspaceName" placeholder="Tên Workspace (VD: Fix Bug Đăng nhập)">
+  
+  <input type="text" id="userId" placeholder="Nhập User ID của bạn">
+  
+  <button id="saveBtn">Lưu các Tab đang mở</button>
+  <div id="status"></div>
+  
+  <div class="tab-list" id="tabList">
+    </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

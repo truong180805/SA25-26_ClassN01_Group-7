@@ -4,7 +4,8 @@
   "version": "1.0",
   "description": "Lưu các tab đang mở thành Workspace cho hệ thống OmniDash",
   "permissions": [
-    "tabs"
+    "tabs",
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html"
