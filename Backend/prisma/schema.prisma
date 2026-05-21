@@ -48,6 +48,7 @@ model User {
   workspaces Workspace[]
   tasks      Task[]
   projects   Project[]
+  notes      Note[]
 
   @@map("users") // Đổi tên bảng trong PostgreSQL thành 'users'
 }
@@ -141,6 +142,22 @@ model Task {
   dependsOn   Task?     @relation("TaskSequence", fields: [dependsOnId], references: [id])
   nextTasks   Task[]    @relation("TaskSequence")
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  content   String   @db.Text
+  url       String?  @db.Text   // Lưu lại đường dẫn trang web nếu note bằng Extension
+  color     String?  @default("#fef08a") // Màu nền giao diện (VD: Vàng, Xanh, Hồng kiểu Sticky Note)
+  isPinned  Boolean  @default(false)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
