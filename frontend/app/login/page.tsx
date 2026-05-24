@@ -75,7 +75,9 @@ export default function LoginPage() {
         <button type="submit" className="w-full px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-700">
           Đăng Nhập
         </button>
-
+        <Link href="/forgot-password" className="text-blue-500 hover:underline">
+        Quên mật khẩu?
+        </Link>
         {/* ĐÂY LÀ ĐOẠN LINK MỚI THÊM VÀO */}
         <div className="mt-4 text-sm text-center">
           <span className="text-gray-600">Chưa có tài khoản? </span>

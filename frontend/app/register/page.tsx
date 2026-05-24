@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
@@ -9,6 +10,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,11 @@ export default function RegisterPage() {
       if (!response.ok) {
         setError(data.error || "Đăng ký thất bại. Vui lòng thử lại.");
         return;
+      }
+
+      if (response.ok) {
+        alert("Đăng ký thành công! Đang chuyển hướng đến trang Đăng nhập...");
+        router.push("/login"); // Tự động nhảy sang trang Login
       }
 
       setSuccessMsg("Đăng ký thành công! Bạn có thể chuyển sang trang đăng nhập.");

@@ -41,6 +41,8 @@ model User {
   avatarUrl    String?    @map("avatar_url") @db.Text
   activeMode   ActiveMode @default(work) @map("active_mode")
   timezone     String?    @db.VarChar(50)
+  resetToken   String?    @db.Text
+  resetTokenExp DateTime?
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
@@ -70,6 +72,7 @@ model Workspace {
   // Quan hệ: Một Workspace có thể được dùng cho nhiều Task hoặc Project
   tasks       Task[]
   projects    Project[]
+  notes       Note[]
 
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -151,6 +154,9 @@ model Note {
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
   
   title     String
   content   String   @db.Text
