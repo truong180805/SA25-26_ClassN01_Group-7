@@ -1,9 +1,9 @@
 const prisma = require('../config/prisma');
 
-// 1. Tạo Ghi chú mới (Hỗ trợ lưu URL từ Extension)
+// 1. Tạo Ghi chú mới (Đã thêm workspaceId)
 const createNote = async (req, res) => {
   try {
-    const { userId, title, content, url, color } = req.body;
+    const { userId, title, content, url, color, workspaceId } = req.body;
 
     if (!userId || !title) {
       return res.status(400).json({ error: "Thiếu userId hoặc tiêu đề." });
@@ -16,6 +16,7 @@ const createNote = async (req, res) => {
         content: content || "",
         url: url || null,
         color: color || "#fef08a",
+        workspaceId: workspaceId || null // Lưu workspaceId
       },
     });
 
@@ -26,23 +27,20 @@ const createNote = async (req, res) => {
   }
 };
 
-// 2. Lấy danh sách Ghi chú của User (Lọc theo URL nếu có)
+// 2. Lấy danh sách Ghi chú
 const getNotesByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { url } = req.query; // Nhận tham số URL từ query (dùng cho Extension)
+    const { url } = req.query; 
 
-    // Nếu Extension gửi lên URL hiện tại, ta chỉ lấy các Note thuộc URL đó
     const whereCondition = { userId };
-    if (url) {
-      whereCondition.url = url;
-    }
+    if (url) whereCondition.url = url;
 
     const notes = await prisma.note.findMany({
       where: whereCondition,
       orderBy: [
-        { isPinned: 'desc' }, // Ghi chú được ghim lên đầu
-        { updatedAt: 'desc' } // Ghi chú mới sửa lên đầu
+        { isPinned: 'desc' }, 
+        { updatedAt: 'desc' } 
       ]
     });
 
@@ -52,11 +50,18 @@ const getNotesByUser = async (req, res) => {
   }
 };
 
-// 3. Cập nhật Ghi chú
+// 3. Cập nhật Ghi chú (Thêm workspaceId)
 const updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const { title, content, color, isPinned, workspaceId } = req.body;
+
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (color !== undefined) updateData.color = color;
+    if (isPinned !== undefined) updateData.isPinned = isPinned;
+    if (workspaceId !== undefined) updateData.workspaceId = workspaceId; // Có thể truyền null để gỡ gán
 
     const updatedNote = await prisma.note.update({
       where: { id },

@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
-import { useAuthStore } from "../../store/useAuthStore";
+import { useAuthStore } from "../../store/useAuthStore"; // Điều chỉnh lại đường dẫn nếu cần
 import { useRouter } from "next/navigation";
 import { 
   FolderKanban, Plus, Clock, LayoutList, Share2, 
   X, CheckCircle2, Lock, Edit2, Trash2, Calendar, 
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight, Briefcase 
 } from "lucide-react";
 
 interface Project {
@@ -19,13 +19,22 @@ interface Project {
   progress: number;
   viewType: string;
   isStrictSequence: boolean;
+  workspaceId: string | null; // <-- THÊM TRƯỜNG NÀY
   createdAt: string;
+}
+
+// --- THÊM INTERFACE WORKSPACE ---
+interface Workspace {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { token } = useAuthStore();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]); // <-- STATE LƯU WORKSPACES
   const [loading, setLoading] = useState(true);
 
   // --- STATE MODAL & FORM ---
@@ -38,12 +47,14 @@ export default function ProjectsPage() {
   const [endDate, setEndDate] = useState("");
   const [viewType, setViewType] = useState("list"); 
   const [isStrictSequence, setIsStrictSequence] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState(""); // <-- STATE CHO DROPDOWN
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- STATE PHÂN TRANG (PAGINATION) ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6; // Số lượng dự án trên 1 trang
+  const itemsPerPage = 6; 
 
+  // Lấy danh sách Dự án
   const fetchProjects = async () => {
     if (!token) return;
     try {
@@ -60,8 +71,24 @@ export default function ProjectsPage() {
     }
   };
 
+  // Lấy danh sách Workspace để đưa vào Dropdown
+  const fetchWorkspaces = async () => {
+    if (!token) return;
+    try {
+      const decoded: any = jwtDecode(token);
+      const res = await fetch(`http://localhost:5000/api/workspaces/user/${decoded.userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspaces(data);
+      }
+    } catch (err) {
+      console.error("Lỗi tải Workspaces:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchWorkspaces(); // Gọi API khi load trang
   }, [token]);
 
   // Đóng form
@@ -69,7 +96,7 @@ export default function ProjectsPage() {
     setIsModalOpen(false);
     setEditingProject(null);
     setTitle(""); setContent(""); setStartDate(""); setEndDate("");
-    setViewType("list"); setIsStrictSequence(false);
+    setViewType("list"); setIsStrictSequence(false); setWorkspaceId("");
   };
 
   // Mở form Sửa
@@ -81,6 +108,7 @@ export default function ProjectsPage() {
     setEndDate(project.endDate ? project.endDate.split('T')[0] : "");
     setViewType(project.viewType);
     setIsStrictSequence(project.isStrictSequence);
+    setWorkspaceId(project.workspaceId || ""); // Nạp workspace cũ vào
     setIsModalOpen(true);
   };
 
@@ -98,7 +126,8 @@ export default function ProjectsPage() {
         startDate: startDate || null, 
         endDate: endDate || null, 
         viewType, 
-        isStrictSequence: viewType === 'sequence' ? isStrictSequence : false 
+        isStrictSequence: viewType === 'sequence' ? isStrictSequence : false,
+        workspaceId: workspaceId || null // Gửi workspaceId xuống Backend
       };
 
       const url = editingProject 
@@ -133,7 +162,6 @@ export default function ProjectsPage() {
       if (res.ok) {
         const newProjects = projects.filter(p => p.id !== id);
         setProjects(newProjects);
-        // Nếu xóa hết item ở trang cuối, lùi về trang trước
         if (currentPage > 1 && newProjects.length <= (currentPage - 1) * itemsPerPage) {
           setCurrentPage(currentPage - 1);
         }
@@ -141,6 +169,12 @@ export default function ProjectsPage() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Hàm tìm tên và màu của Workspace để hiển thị Huy hiệu (Badge)
+  const getWorkspaceInfo = (wId: string | null) => {
+    if (!wId) return null;
+    return workspaces.find(w => w.id === wId) || null;
   };
 
   // --- LOGIC PHÂN TRANG ---
@@ -182,75 +216,91 @@ export default function ProjectsPage() {
         <>
           {/* LƯỚI CARD DỰ ÁN */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {currentProjects.map((project) => (
-              <div 
-                key={project.id}
-                onClick={() => router.push(`/dashboard/project/${project.id}`)}
-                className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group flex flex-col h-full relative"
-              >
-                {project.isStrictSequence && (
-                   <div className="absolute top-0 right-0 bg-orange-50 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-bl-xl flex items-center shadow-sm">
-                     <Lock size={12} className="mr-1"/> Khóa chặt
-                   </div>
-                )}
+            {currentProjects.map((project) => {
+              const wsInfo = getWorkspaceInfo(project.workspaceId);
+              
+              return (
+                <div 
+                  key={project.id}
+                  onClick={() => router.push(`/dashboard/project/${project.id}`)}
+                  className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group flex flex-col h-full relative"
+                >
+                  {project.isStrictSequence && (
+                     <div className="absolute top-0 right-0 bg-orange-50 text-orange-600 text-[10px] font-bold px-3 py-1.5 rounded-bl-xl flex items-center shadow-sm">
+                       <Lock size={12} className="mr-1"/> Khóa chặt
+                     </div>
+                  )}
 
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    {project.viewType === 'sequence' ? <Share2 size={24} /> : <LayoutList size={24} />}
-                  </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${project.viewType === 'sequence' ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
-                    {project.viewType === 'sequence' ? 'Sơ đồ' : 'Danh sách'}
-                  </span>
-                </div>
-                
-                <h3 className="font-bold text-xl text-gray-800 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{project.title}</h3>
-                <p className="text-xs text-gray-500 line-clamp-2 mb-4 h-8">
-                  {project.content || "Chưa có mô tả chi tiết."}
-                </p>
-
-                {/* Thời gian */}
-                <div className="flex items-center text-xs text-gray-500 font-medium mb-4">
-                  <Calendar size={14} className="mr-2 text-blue-400" />
-                  {project.startDate ? new Date(project.startDate).toLocaleDateString('vi-VN') : "---"} 
-                  <span className="mx-1.5">➔</span> 
-                  {project.endDate ? new Date(project.endDate).toLocaleDateString('vi-VN') : "Vô thời hạn"}
-                </div>
-
-                {/* Thanh tiến độ */}
-                <div className="mb-6">
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span className="text-gray-400">Tiến độ</span>
-                    <span className="text-blue-600">{project.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                    <div className={`h-full transition-all duration-500 ${project.progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${project.progress}%` }}></div>
-                  </div>
-                </div>
-
-                {/* Thao tác (Footer của Card) */}
-                <div className="flex items-center justify-between border-t border-gray-50 pt-4 mt-auto">
-                  <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider flex items-center">
-                    <Clock size={12} className="mr-1.5" /> Tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                      {project.viewType === 'sequence' ? <Share2 size={24} /> : <LayoutList size={24} />}
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${project.viewType === 'sequence' ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+                      {project.viewType === 'sequence' ? 'Sơ đồ' : 'Danh sách'}
+                    </span>
                   </div>
                   
-                  {/* Dùng stopPropagation để khi bấm Sửa/Xóa nó không nhảy sang trang chi tiết */}
-                  <div className="flex space-x-1">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); openEditModal(project); }} 
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Sửa"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} 
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Xóa"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <h3 className="font-bold text-xl text-gray-800 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{project.title}</h3>
+                  
+                  <p className={`text-xs text-gray-500 line-clamp-2 ${wsInfo ? 'mb-2 h-8' : 'mb-4 h-8'}`}>
+                    {project.content || "Chưa có mô tả chi tiết."}
+                  </p>
+
+                  {/* HUY HIỆU WORKSPACE NẾU CÓ */}
+                  {wsInfo && (
+                    <div className="mb-4 flex items-center">
+                      <span 
+                        className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold tracking-wide border"
+                        style={{ backgroundColor: `${wsInfo.color}15`, color: wsInfo.color, borderColor: `${wsInfo.color}30` }}
+                      >
+                        <Briefcase size={12} className="mr-1.5" /> {wsInfo.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Thời gian */}
+                  <div className="flex items-center text-xs text-gray-500 font-medium mb-4 mt-auto">
+                    <Calendar size={14} className="mr-2 text-blue-400" />
+                    {project.startDate ? new Date(project.startDate).toLocaleDateString('vi-VN') : "---"} 
+                    <span className="mx-1.5">➔</span> 
+                    {project.endDate ? new Date(project.endDate).toLocaleDateString('vi-VN') : "Vô thời hạn"}
+                  </div>
+
+                  {/* Thanh tiến độ */}
+                  <div className="mb-6">
+                    <div className="flex justify-between text-xs font-bold mb-1">
+                      <span className="text-gray-400">Tiến độ</span>
+                      <span className="text-blue-600">{project.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div className={`h-full transition-all duration-500 ${project.progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${project.progress}%` }}></div>
+                    </div>
+                  </div>
+
+                  {/* Thao tác (Footer của Card) */}
+                  <div className="flex items-center justify-between border-t border-gray-50 pt-4">
+                    <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider flex items-center">
+                      <Clock size={12} className="mr-1.5" /> Tạo: {new Date(project.createdAt).toLocaleDateString('vi-VN')}
+                    </div>
+                    
+                    <div className="flex space-x-1">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); openEditModal(project); }} 
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Sửa"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} 
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Xóa"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* THANH ĐIỀU HƯỚNG PHÂN TRANG */}
@@ -281,7 +331,7 @@ export default function ProjectsPage() {
       {/* --- MODAL FORM CHUNG (TẠO/SỬA) --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white rounded-3xl w-full max-w-xl max-h-[95vh] overflow-y-auto shadow-2xl animate-in zoom-in-95">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
               <h2 className="text-xl font-black text-gray-800">{editingProject ? "Cập nhật dự án" : "Tạo dự án mới"}</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-2 rounded-full"><X size={20}/></button>
@@ -296,6 +346,20 @@ export default function ProjectsPage() {
               <div>
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Mô tả</label>
                 <textarea className="w-full border-2 border-gray-100 focus:border-blue-500 p-3 rounded-xl text-sm text-gray-700 outline-none resize-none" rows={2} value={content} onChange={e => setContent(e.target.value)} />
+              </div>
+
+              {/* BỘ CHỌN GÁN WORKSPACE */}
+              <div>
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">Gán Không gian làm việc</label>
+                <select 
+                  className="w-full border-2 border-gray-100 focus:border-blue-500 p-3 rounded-xl text-sm font-bold text-gray-800 outline-none cursor-pointer"
+                  value={workspaceId} onChange={e => setWorkspaceId(e.target.value)}
+                >
+                  <option value="">-- Không gán Không gian nào --</option>
+                  {workspaces.map(ws => (
+                    <option key={ws.id} value={ws.id}>📁 {ws.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
