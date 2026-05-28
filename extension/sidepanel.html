@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg-main: #f8fafc; --bg-card: #ffffff;
+      --border-light: #f1f5f9; --border-dark: #e2e8f0;
+      --primary: #2563eb; --primary-hover: #1d4ed8;
+      --text-main: #0f172a; --text-muted: #64748b; --text-light: #94a3b8;
+    }
+    body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; background-color: var(--bg-main); color: var(--text-main); }
+    
+    /* SIDEBAR */
+    .sidebar { width: 64px; background-color: var(--bg-card); border-right: 1px solid var(--border-dark); display: flex; flex-direction: column; align-items: center; padding-top: 20px; gap: 16px; flex-shrink: 0; z-index: 10; box-shadow: 2px 0 8px rgba(0,0,0,0.02); }
+    .nav-btn { width: 44px; height: 44px; border-radius: 14px; background: transparent; border: 1px solid transparent; color: var(--text-light); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+    .nav-btn:hover { background-color: var(--bg-main); color: var(--text-muted); }
+    .nav-btn.active { background-color: #eff6ff; color: var(--primary); border-color: #dbeafe; }
+
+    /* MAIN CONTENT */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: var(--bg-main); }
+    .tab-section { display: none; padding: 24px; width: 100%; box-sizing: border-box; animation: fadeIn 0.3s ease; }
+    .tab-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    h2 { margin: 0 0 6px 0; font-size: 20px; font-weight: 900; }
+    p.subtitle { margin: 0 0 24px 0; font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .card { background-color: var(--bg-card); border: 1px solid var(--border-dark); border-radius: 20px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(15,23,42,0.02); }
+    
+    /* FORMS & BUTTONS */
+    .form-label { display: block; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 8px; }
+    .input-group { margin-bottom: 16px; }
+    input.text-input, textarea.text-input { width: 100%; padding: 12px 16px; box-sizing: border-box; background-color: var(--bg-main); border: 2px solid var(--border-light); border-radius: 12px; color: var(--text-main); font-size: 13px; font-weight: 600; outline: none; transition: 0.2s; font-family: inherit; }
+    input.text-input:focus, textarea.text-input:focus { border-color: var(--primary); background-color: var(--bg-card); }
+    
+    .btn { width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+    
+    /* INLINE DELETE CONFIRM BUTTON (XÓA TẠI CHỖ) */
+    .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; background-color: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: 8px; transition: 0.2s; }
+    .btn-icon:hover { background-color: #fca5a5; color: #b91c1c; }
+    .btn-icon.confirming { background-color: #dc2626; color: white; width: auto; padding: 0 12px; font-size: 11px; font-weight: bold; }
+    
+    .text-btn-danger { background:none; border:none; color:#ef4444; cursor:pointer; font-weight:bold; transition: 0.2s; padding: 4px 8px; border-radius: 6px; }
+    .text-btn-danger.confirming { background-color: #ef4444; color: white; }
+
+    /* PICKERS & OTHERS */
+    .picker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .picker-item { aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--border-light); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: 0.2s; background-color: var(--bg-card); }
+    .picker-item.selected { border-color: var(--text-main); transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .smart-badge { display: inline-flex; align-items: center; padding: 6px 12px; background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 20px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(18px); }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <button class="nav-btn active" data-target="tab-reminders" title="Nhắc nhở (Reminders)">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+    </button>
+    <button class="nav-btn" data-target="tab-workspaces" title="Workspaces">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+    </button>
+    <button class="nav-btn" data-target="tab-notes" title="Ghi chú (Notes)">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    </button>
+    <button class="nav-btn" data-target="tab-tasks" title="Tác vụ (Tasks)">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+    </button>
+  </nav>
+
+  <main class="main-content">
+    
+    <div id="tab-reminders" class="tab-section active">
+      <h2>Nhắc nhở</h2>
+      <p class="subtitle">Thiết lập chuông báo bảo vệ sức khỏe</p>
+      <div class="card">
+        <div class="input-group"><label class="form-label">Tên nhắc nhở</label><input type="text" id="remTitle" class="text-input" placeholder="VD: Uống một cốc nước lọc..."></div>
+        <div class="input-group">
+          <label class="form-label">Thời gian lặp lại</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-size: 13px; font-weight: 800; color: var(--text-muted)">Mỗi</span>
+            <input type="number" id="remInterval" class="text-input" style="flex: 1; text-align: center;" placeholder="30" value="30">
+            <span style="font-size: 13px; font-weight: 800; color: var(--text-muted)">Phút</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="form-label">Biểu tượng</label>
+          <div class="picker-grid" id="iconPicker">
+            <div class="picker-item selected" data-value="💧">💧</div><div class="picker-item" data-value="👁️">👁️</div><div class="picker-item" data-value="🚶">🚶</div><div class="picker-item" data-value="💊">💊</div><div class="picker-item" data-value="🧘">🧘</div><div class="picker-item" data-value="🍎">🍎</div>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="form-label">Màu sắc nền</label>
+          <div class="picker-grid" id="colorPicker">
+            <div class="picker-item selected" data-value="#dbeafe" style="background-color: #dbeafe;"></div><div class="picker-item" data-value="#fef08a" style="background-color: #fef08a;"></div><div class="picker-item" data-value="#bbf7d0" style="background-color: #bbf7d0;"></div><div class="picker-item" data-value="#fbcfe8" style="background-color: #fbcfe8;"></div><div class="picker-item" data-value="#fed7aa" style="background-color: #fed7aa;"></div><div class="picker-item" data-value="#e9d5ff" style="background-color: #e9d5ff;"></div>
+          </div>
+        </div>
+        <button class="btn" id="saveRemBtn">Lưu nhắc nhở</button>
+      </div>
+      <div id="reminderList"></div>
+    </div>
+
+    <div id="tab-workspaces" class="tab-section">
+      <h2>Không gian làm việc</h2>
+      <p class="subtitle">Quản lý và gom nhóm các tab trình duyệt</p>
+      <div class="card" style="padding: 16px;">
+        <input type="text" id="wsNameInput" class="text-input" placeholder="Tên Không gian (VD: Dự án Toán)" style="margin-bottom: 12px;">
+        <button class="btn" id="saveTabsBtn" style="background-color: #0f172a;">Gom các Tab hiện tại & Lưu</button>
+      </div>
+      <div id="workspaceList"></div>
+    </div>
+
+    <div id="tab-notes" class="tab-section">
+      <div id="noteListView">
+        <h2>Ghi chú thông minh</h2>
+        <div class="smart-badge" id="wsNoteLabel">Đang đồng bộ với Web</div>
+        <div class="card">
+          <div class="input-group">
+            <label class="form-label">Tạo ghi chú nhanh</label>
+            <input type="text" id="noteTitle" class="text-input" placeholder="Tiêu đề..." style="margin-bottom: 8px;">
+            <textarea id="noteContent" class="text-input" rows="2" placeholder="Nội dung..."></textarea>
+          </div>
+          <button class="btn" id="saveNoteBtn">Lưu Ghi chú</button>
+        </div>
+        <div id="noteList"></div>
+      </div>
+      <div id="noteDetailView" style="display: none; flex-direction: column; height: 100vh; padding-bottom: 40px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+          <button id="backToNotesBtn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; display:flex; align-items:center;"> Quay lại </button>
+          <button id="delNoteBtn" class="text-btn-danger" title="Xóa ghi chú">Xóa</button>
+        </div>
+        <div id="detailCard" class="card" style="flex:1; display:flex; flex-direction:column; border-radius: 24px;">
+          <input type="text" id="detailTitle" style="background:transparent; border:none; font-size:20px; font-weight:900; color:#0f172a; outline:none; margin-bottom:12px; width:100%;" placeholder="Tiêu đề...">
+          <textarea id="detailContent" style="background:transparent; border:none; font-size:14px; color:#1e293b; outline:none; flex:1; resize:none; width:100%; line-height:1.6;" placeholder="Nội dung..."></textarea>
+          <div style="margin-top: 16px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="picker-grid" id="detailColorPicker" style="display:flex; gap:6px;">
+              <div class="picker-item" data-value="#dbeafe" style="background-color: #dbeafe; width:24px; height:24px;"></div><div class="picker-item" data-value="#fef08a" style="background-color: #fef08a; width:24px; height:24px;"></div><div class="picker-item" data-value="#bbf7d0" style="background-color: #bbf7d0; width:24px; height:24px;"></div><div class="picker-item" data-value="#fbcfe8" style="background-color: #fbcfe8; width:24px; height:24px;"></div><div class="picker-item" data-value="#e9d5ff" style="background-color: #e9d5ff; width:24px; height:24px;"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn" id="updateNoteBtn" style="background-color: #0f172a; margin-top: 16px;">Lưu thay đổi</button>
+      </div>
+    </div>
+
+    <div id="tab-tasks" class="tab-section">
+      <div id="taskListView">
+        <h2>Tác vụ liên quan</h2>
+        <div class="smart-badge" id="wsTaskLabel">Tự động nhận diện Workspace</div>
+        <div id="taskList"></div>
+      </div>
+
+      <div id="taskDetailView" style="display: none; flex-direction: column; height: 100vh; padding-bottom: 40px;">
+        <div style="display: flex; margin-bottom: 16px;">
+          <button id="backToTasksBtn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; display:flex; align-items:center;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px"><polyline points="15 18 9 12 15 6"></polyline></svg> Quay lại
+          </button>
+        </div>
+        <div class="card" style="flex:1; background-color: #eff6ff; border-color: #bfdbfe;">
+          <h3 id="tdTitle" style="margin:0 0 12px 0; font-size:18px; color:#1e3a8a; font-weight:900;">Tiêu đề</h3>
+          <div style="display:flex; gap:10px; margin-bottom:16px;">
+            <span id="tdStatus" style="font-size:11px; font-weight:bold; padding:4px 8px; border-radius:6px; background:#dbeafe; color:#2563eb;">Trạng thái</span>
+            <span id="tdPriority" style="font-size:11px; font-weight:bold; padding:4px 8px; border-radius:6px; background:#fee2e2; color:#ef4444;">Ưu tiên</span>
+          </div>
+          <p id="tdContent" style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:20px; white-space:pre-wrap;">Nội dung</p>
+          <div style="border-top: 1px solid #bfdbfe; padding-top: 12px;">
+            <p id="tdDates" style="font-size:11px; color:#64748b; font-weight:600; margin:0;"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

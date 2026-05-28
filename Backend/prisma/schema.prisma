@@ -51,6 +51,7 @@ model User {
   tasks      Task[]
   projects   Project[]
   notes      Note[]
+  reminders  Reminder[]
 
   @@map("users") // Đổi tên bảng trong PostgreSQL thành 'users'
 }
@@ -163,6 +164,22 @@ model Note {
   url       String?  @db.Text   // Lưu lại đường dẫn trang web nếu note bằng Extension
   color     String?  @default("#fef08a") // Màu nền giao diện (VD: Vàng, Xanh, Hồng kiểu Sticky Note)
   isPinned  Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  icon      String?  @default("🔔")
+  color     String?  @default("#3b82f6")
+  interval  Int      // Số phút đếm ngược (VD: 20, 60, 120...)
+  isActive  Boolean  @default(true) // Công tắc bật/tắt nhắc nhở
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

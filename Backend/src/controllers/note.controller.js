@@ -31,10 +31,25 @@ const createNote = async (req, res) => {
 const getNotesByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { url } = req.query; 
+    const { url, workspaceIds } = req.query; 
 
+    // Tạo mảng điều kiện OR
+    const orConditions = [];
+    if (url) {
+      orConditions.push({ url: url });
+    }
+    if (workspaceIds) {
+      const ids = workspaceIds.split(','); // Chuyển chuỗi 'id1,id2' thành mảng
+      orConditions.push({ workspaceId: { in: ids } });
+    }
+
+    // Điều kiện gốc là userId
     const whereCondition = { userId };
-    if (url) whereCondition.url = url;
+    
+    // Nếu có truyền url hoặc workspaceIds từ Extension, áp dụng điều kiện OR
+    if (orConditions.length > 0) {
+      whereCondition.OR = orConditions;
+    }
 
     const notes = await prisma.note.findMany({
       where: whereCondition,
@@ -46,6 +61,7 @@ const getNotesByUser = async (req, res) => {
 
     res.status(200).json(notes);
   } catch (error) {
+    console.error("Lỗi getNotesByUser:", error);
     res.status(500).json({ error: "Lỗi khi lấy danh sách ghi chú." });
   }
 };

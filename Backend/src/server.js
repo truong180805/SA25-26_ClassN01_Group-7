@@ -18,6 +18,8 @@ const workspaceRoutes = require('./routes/workspace.routes');
 const taskRoutes = require('./routes/task.routes');
 const projectRoutes = require('./routes/project.routes');
 const noteRoutes = require('./routes/note.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const reminderRoutes = require('./routes/reminder.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -25,6 +27,8 @@ app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // Health check endpoint to verify the server is running
 app.get('/api/health', (req, res) => {

@@ -4,15 +4,17 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { 
-  LayoutDashboard, Briefcase, CheckSquare, FileText, 
-  Settings, LogOut, ChevronLeft, ChevronRight 
+  LayoutDashboard, Briefcase, Calendar, CheckSquare, FileText, 
+  Settings, LogOut, ChevronLeft, ChevronRight, Bell 
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { jwtDecode } from "jwt-decode";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname(); 
-  const { logout } = useAuthStore();
+  const { token, logout } = useAuthStore();
   const router = useRouter();
   
   // State điều khiển việc thu gọn Sidebar theo yêu cầu của bạn
@@ -23,9 +25,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push("/login");
   };
 
+  useEffect(() => {
+      if (token) {
+        try {
+          const decoded: any = jwtDecode(token);
+          // PHÁT TÍN HIỆU CHO EXTENSION 
+          window.postMessage({ type: "OMNI_SYNC_USER", userId: decoded.userId }, "*");
+        } catch (error) {
+          console.error("Lỗi giải mã token", error);
+        }
+      }
+    }, [token]);
+
   // Danh sách các menu chính
   const menuItems = [
     { name: "Tổng quan", path: "/dashboard", icon: LayoutDashboard },
+    { name: "Lịch trình", path: "/dashboard/calendar", icon: Calendar },
+    { name: "Nhắc nhở", path: "/dashboard/reminders", icon: Bell },
     { name: "Workspaces", path: "/dashboard/workspaces", icon: Briefcase },
     { name: "Tác vụ (Tasks)", path: "/dashboard/projects", icon: CheckSquare }, 
     { name: "Ghi chú (Notes)", path: "/dashboard/notes", icon: FileText },

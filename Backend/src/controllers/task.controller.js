@@ -158,4 +158,20 @@ const deleteTask = async (req, res) => {
   }
 };
 
-module.exports = { createTask, getTasksByProject, updateTask, deleteTask };
+// Lấy toàn bộ tác vụ của một User (Dành cho tính năng Lịch)
+const getTasksByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const tasks = await prisma.task.findMany({
+      where: { userId },
+      include: { project: { select: { title: true } } }, // Lấy kèm tên dự án
+      orderBy: { endDate: 'asc' }
+    });
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error("Lỗi lấy toàn bộ task:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi tải Lịch trình." });
+  }
+};
+
+module.exports = { createTask, getTasksByProject, updateTask, deleteTask, getTasksByUser };
