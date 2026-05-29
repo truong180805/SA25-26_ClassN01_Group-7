@@ -20,6 +20,7 @@ const projectRoutes = require('./routes/project.routes');
 const noteRoutes = require('./routes/note.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const reminderRoutes = require('./routes/reminder.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -29,6 +30,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reminders', reminderRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint to verify the server is running
 app.get('/api/health', (req, res) => {

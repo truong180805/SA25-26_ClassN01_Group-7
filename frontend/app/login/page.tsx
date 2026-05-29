@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../store/useAuthStore"; // Lấy Store quản lý Token
@@ -35,8 +36,18 @@ export default function LoginPage() {
       // Lưu Token vào Zustand (Zustand sẽ tự lưu vào localStorage)
       setToken(data.token);
       
-      // Chuyển hướng thẳng vào trang Dashboard
-      router.push("/dashboard");
+      if (response.ok) {
+        try {
+          const decoded: any = jwtDecode(data.token);
+          if (decoded.role === 'ADMIN') {
+            router.push('/admin'); // Admin bay thẳng vào Khu quản trị
+          } else {
+            router.push('/dashboard'); // User bình thường vào Dashboard
+          }
+        } catch (err) {
+          router.push('/dashboard');
+        }
+      }
 
     } catch (err) {
       setError("Không thể kết nối đến máy chủ.");

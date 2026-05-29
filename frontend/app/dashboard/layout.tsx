@@ -48,8 +48,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Lịch trình", path: "/dashboard/calendar", icon: Calendar },
     { name: "Nhắc nhở", path: "/dashboard/reminders", icon: Bell },
     { name: "Workspaces", path: "/dashboard/workspaces", icon: Briefcase },
-    { name: "Tác vụ (Tasks)", path: "/dashboard/projects", icon: CheckSquare }, 
-    { name: "Ghi chú (Notes)", path: "/dashboard/notes", icon: FileText },
+    { name: "Tác vụ", path: "/dashboard/projects", icon: CheckSquare }, 
+    { name: "Ghi chú", path: "/dashboard/notes", icon: FileText },
   ];
 
   return (
