@@ -27,9 +27,21 @@ export default function CalendarPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [viewMode, setViewMode] = useState<"month" | "week">("month");
+  const [viewMode, setViewMode] = useState<"month" | "week" | "list">("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateInfo, setSelectedDateInfo] = useState<{ date: Date, tasks: Task[] } | null>(null);
+
+  useEffect(() => {
+    if (viewMode === 'list') {
+      setTimeout(() => {
+        const todayEl = document.getElementById('today-group');
+        if (todayEl) {
+          // Cuộn mượt mà đến vị trí của ngày hôm nay
+          todayEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100); // Đợi 100ms để HTML render xong
+    }
+  }, [viewMode, tasks]);
 
   useEffect(() => {
     if (!token) return;
@@ -139,7 +151,10 @@ export default function CalendarPage() {
               <LayoutGrid size={16} className="mr-2" /> Tháng
             </button>
             <button onClick={() => setViewMode("week")} className={`flex-1 sm:w-32 flex items-center justify-center px-4 py-2 text-sm font-bold rounded-xl transition-all ${viewMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>
-              <ListIcon size={16} className="mr-2" /> Tuần
+              <CalendarIcon size={16} className="mr-2" /> Tuần
+            </button>
+            <button onClick={() => setViewMode("list")} className={`flex-1 sm:w-32 flex items-center justify-center px-4 py-2 text-sm font-bold rounded-xl transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>
+              <ListIcon size={16} className="mr-2" /> Danh sách
             </button>
           </div>
 
@@ -155,18 +170,16 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* KHUNG LỊCH CHÍNH (FIX LỖI MẤT CUỘN TẠI ĐÂY) */}
-      {/* ========================================== */}
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-180px)] min-h-[500px]">
         
         {/* Tiêu đề Thứ (Cố định không bị cuộn) */}
+        { viewMode !== 'list' && (
         <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 shrink-0">
           {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'].map((day) => (
             <div key={day} className="py-3 text-center text-xs font-black text-gray-500 uppercase tracking-widest border-r border-gray-100 last:border-0">{day}</div>
           ))}
         </div>
-
+        )}
         {/* Lưới Ngày (Cho phép cuộn dọc overflow-y-auto) */}
         {viewMode === "month" ? (
           <div className="grid grid-cols-7 bg-gray-200 gap-px flex-1 overflow-y-auto custom-scrollbar">
@@ -201,7 +214,7 @@ export default function CalendarPage() {
               );
             })}
           </div>
-        ) : (
+        ) : viewMode === "week" ? (
           <div className="grid grid-cols-7 bg-gray-200 gap-px flex-1 overflow-y-auto custom-scrollbar">
             {weekDays.map((dateObj, index) => {
               const dayTasks = getTasksForDate(dateObj);
@@ -228,6 +241,130 @@ export default function CalendarPage() {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="p-0 overflow-y-auto flex-1 custom-scrollbar bg-gray-50/50" id="list-scroll-container">
+            {/* THU GỌN CHIỀU RỘNG (max-w-3xl) ĐỂ HẾT KHOẢNG TRẮNG */}
+            <div className="max-w-3xl mx-auto bg-white min-h-full border-x border-gray-100 shadow-sm pb-24">
+              
+              {(() => {
+                if (tasks.length === 0) {
+                  return <div className="text-center py-20 text-gray-400 font-medium">Chưa có tác vụ nào trong hệ thống.</div>;
+                }
+
+                const datedGroups: { [key: string]: { dateObj: Date; tasks: Task[] } } = {};
+                const noDeadlineTasks: Task[] = [];
+
+                tasks.forEach(task => {
+                  if (!task.endDate) { noDeadlineTasks.push(task); return; }
+                  const dateKey = task.endDate.split('T')[0];
+                  if (!datedGroups[dateKey]) {
+                    datedGroups[dateKey] = { dateObj: new Date(task.endDate), tasks: [] };
+                  }
+                  datedGroups[dateKey].tasks.push(task);
+                });
+
+                const sortedDateKeys = Object.keys(datedGroups).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+                const formatGroupDate = (date: Date) => {
+                  const daysOfWeek = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+                  return `${daysOfWeek[date.getDay()].toUpperCase()}, ${date.getDate()} THÁNG ${date.getMonth() + 1}`;
+                };
+
+                const getLeftBorderColor = (priority: string, isCompleted: boolean) => {
+                  if (isCompleted) return "bg-gray-300";
+                  switch (priority) {
+                    case 'high': return "bg-red-500";
+                    case 'medium': return "bg-amber-500";
+                    default: return "bg-blue-500";
+                  }
+                };
+
+                // Hàm kiểm tra xem 1 ngày có phải là Hôm nay không
+                const checkIsToday = (date: Date) => {
+                  const t = new Date();
+                  return date.getDate() === t.getDate() && date.getMonth() === t.getMonth() && date.getFullYear() === t.getFullYear();
+                };
+
+                return (
+                  <div className="flex flex-col">
+                    {sortedDateKeys.map(dateKey => {
+                      const group = datedGroups[dateKey];
+                      const isGroupToday = checkIsToday(group.dateObj); // Kiểm tra hôm nay
+                      const sortedGroupTasks = [...group.tasks].sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted));
+                      
+                      return (
+                        // 🚀 NẾU LÀ HÔM NAY -> GÁN ID "today-group" ĐỂ AUTO-SCROLL NHẬN DIỆN
+                        <div key={dateKey} id={isGroupToday ? "today-group" : ""} className="flex flex-col">
+                          
+                          {/* 🚀 ĐỔI MÀU STICKY HEADER CHO NGÀY HÔM NAY */}
+                          <div className={`sticky top-0 backdrop-blur-md border-b px-6 md:px-10 py-3 z-10 flex justify-between items-center ${isGroupToday ? 'bg-blue-50/95 border-blue-100' : 'bg-white/95 border-gray-100'}`}>
+                            <span className={`text-[11px] font-black tracking-widest uppercase ${isGroupToday ? 'text-blue-600' : 'text-gray-400'}`}>
+                              {formatGroupDate(group.dateObj)} {isGroupToday && " • HÔM NAY"}
+                            </span>
+                          </div>
+
+                          <div className="divide-y divide-gray-50 px-4 md:px-8">
+                            {sortedGroupTasks.map(task => (
+                              <div 
+                                key={task.id} 
+                                onClick={() => router.push(`/dashboard/project/${task.projectId}`)}
+                                className="py-4 px-3 flex items-center justify-between cursor-pointer group transition-colors hover:bg-gray-50 rounded-xl my-1"
+                              >
+                                <div className="flex items-center space-x-4 min-w-0">
+                                  <div className={`w-1 h-8 rounded-full ${getLeftBorderColor(task.priority, task.isCompleted)} shrink-0`} />
+                                  <div className="min-w-0">
+                                    <h4 className={`text-[15px] font-bold truncate transition-colors ${task.isCompleted ? 'line-through text-gray-400' : 'text-gray-900 group-hover:text-blue-600'}`}>
+                                      {task.title}
+                                    </h4>
+                                    {task.project && (
+                                      <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mt-0.5">
+                                        📁 {task.project.title}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0 ml-4 flex items-center space-x-3">
+                                  {task.isCompleted && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-wider">Hoàn thành</span>}
+                                  <span className="text-xs font-medium text-gray-300">all-day</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {noDeadlineTasks.length > 0 && (
+                      <div className="flex flex-col mt-4">
+                        <div className="sticky top-0 bg-gray-100/90 backdrop-blur-md border-b border-gray-200 px-6 md:px-10 py-3 z-10">
+                          <span className="text-[11px] font-black text-gray-500 tracking-widest uppercase">
+                            ☕ BẤT CỨ LÚC NÀO (CHƯA XẾP LỊCH)
+                          </span>
+                        </div>
+                        <div className="divide-y divide-gray-50 px-4 md:px-8">
+                          {[...noDeadlineTasks].sort((a, b) => Number(a.isCompleted) - Number(b.isCompleted)).map(task => (
+                            <div key={task.id} onClick={() => router.push(`/dashboard/project/${task.projectId}`)} className="py-4 px-3 flex items-center justify-between cursor-pointer group transition-colors hover:bg-gray-50 rounded-xl my-1">
+                              <div className="flex items-center space-x-4 min-w-0">
+                                <div className={`w-1 h-8 rounded-full ${getLeftBorderColor(task.priority, task.isCompleted)} shrink-0`} />
+                                <div className="min-w-0">
+                                  <h4 className={`text-[15px] font-bold truncate transition-colors ${task.isCompleted ? 'line-through text-gray-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{task.title}</h4>
+                                  {task.project && <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mt-0.5">📁 {task.project.title}</p>}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0 ml-4 flex items-center space-x-3">
+                                {task.isCompleted && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-wider">Hoàn thành</span>}
+                                <span className="text-xs font-medium text-gray-300">tự do</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
       </div>

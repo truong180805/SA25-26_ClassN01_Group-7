@@ -16,9 +16,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname(); 
   const { token, logout } = useAuthStore();
   const router = useRouter();
-  
-  // State điều khiển việc thu gọn Sidebar theo yêu cầu của bạn
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userName, setUserName] = useState("Đang tải...");
+  const [userInitial, setUserInitial] = useState("U");
 
   const handleLogout = () => {
     logout();
@@ -29,6 +29,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (token) {
         try {
           const decoded: any = jwtDecode(token);
+          const displayName = decoded.name || decoded.username || (decoded.email ? decoded.email.split('@')[0] : "Người dùng");
+          
+          setUserName(displayName);
+          setUserInitial(displayName.charAt(0).toUpperCase());
+
           // PHÁT TÍN HIỆU CHO EXTENSION 
           window.postMessage({ type: "OMNI_SYNC_USER", userId: decoded.userId }, "*");
         } catch (error) {
@@ -149,9 +154,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Topbar chung */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-end px-8 shrink-0 shadow-sm z-10">
           <div className="flex items-center space-x-3 bg-gray-50 py-1.5 px-2 rounded-full border border-gray-100">
-            <span className="text-xs font-bold text-gray-600 pl-3">Tài khoản User</span>
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-inner">
-              U
+            <span className="text-xs font-bold text-gray-600 pl-3">{userName}</span>
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-inner uppercase">
+              {userInitial}
             </div>
           </div>
         </header>

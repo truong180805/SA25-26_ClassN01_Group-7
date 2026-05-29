@@ -160,7 +160,7 @@ export default function NotesPage() {
   if (loading) return <div className="flex justify-center items-center h-full"><div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full"></div></div>;
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-6 py-10">
+    <div className="max-w-7xl mx-auto w-full px-6 py-10 animate-in fade-in duration-500">
       
       {/* HEADER & TÌM KIẾM */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">

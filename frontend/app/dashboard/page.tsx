@@ -44,8 +44,9 @@ export default function DashboardOverviewPage() {
     const fetchDashboardData = async () => {
       try {
         const decoded: any = jwtDecode(token);
-        // Lấy tạm tên từ email (cắt phần trước @) nếu chưa có Tên đầy đủ
-        setUserName(decoded.email?.split('@')[0] || "Bạn");
+        
+        const displayName = decoded.name || decoded.username || (decoded.email ? decoded.email.split('@')[0] : "Bạn");
+        setUserName(displayName);
 
         const res = await fetch(`http://localhost:5000/api/dashboard/${decoded.userId}`);
         if (res.ok) {
@@ -80,7 +81,7 @@ export default function DashboardOverviewPage() {
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center">
             <LayoutDashboard className="mr-3 text-blue-600" size={32} />
-            Chào buổi sáng, {userName}! 👋
+            Xin Chào, {userName}! 👋
           </h1>
           <p className="text-sm text-gray-500 font-medium mt-1">
             Đây là tóm tắt toàn bộ hoạt động và tiến độ công việc của bạn trên OmniDash.

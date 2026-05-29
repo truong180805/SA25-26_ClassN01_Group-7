@@ -186,7 +186,7 @@ export default function ProjectsPage() {
   if (loading) return <div className="flex justify-center items-center h-full"><div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full"></div></div>;
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-6 py-10 relative">
+    <div className="max-w-7xl mx-auto w-full px-6 py-10 relative animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center">

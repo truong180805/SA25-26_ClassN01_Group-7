@@ -146,7 +146,7 @@ export default function WorkspacesPage() {
   if (loading) return <div className="flex justify-center items-center h-full"><div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full"></div></div>;
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-6 py-10">
+    <div className="max-w-7xl mx-auto w-full px-6 py-10 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center">
