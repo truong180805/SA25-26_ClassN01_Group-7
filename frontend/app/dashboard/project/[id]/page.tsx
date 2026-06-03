@@ -50,7 +50,7 @@ export default function ProjectDetailPage() {
       <header className="bg-white border-b sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={22} /></button>
+            <button onClick={() => router.push('/dashboard/projects')} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={22} /></button>
             <div>
               <h1 className="text-2xl font-black text-gray-800 tracking-tight">{project.title}</h1>
               <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-widest">
