@@ -44,7 +44,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// 3. Xóa một Người dùng bất kỳ (Quyền sinh sát)
+// 3. Xóa một Người dùng bất kỳ (Và toàn bộ dữ liệu liên quan)
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -54,11 +54,36 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ error: "Bạn không thể tự xóa tài khoản của chính mình!" });
     }
 
-    await prisma.user.delete({ where: { id } });
-    res.status(200).json({ message: "Đã xóa người dùng thành công." });
+    // 🚀 Dùng $transaction để xóa sạch dữ liệu từ ngọn đến gốc
+    await prisma.$transaction(async (tx) => {
+      // 1. Xóa các dữ liệu độc lập trước
+      await tx.note.deleteMany({ where: { userId: id } });
+      await tx.reminder.deleteMany({ where: { userId: id } });
+      await tx.task.deleteMany({ where: { userId: id } });
+      await tx.project.deleteMany({ where: { userId: id } });
+
+      // 2. Tìm các Workspace của User này để xóa các Tab bên trong
+      const userWorkspaces = await tx.workspace.findMany({ where: { userId: id } });
+      const workspaceIds = userWorkspaces.map(ws => ws.id);
+      
+      if (workspaceIds.length > 0) {
+        // Xóa các Tab nằm trong Workspace
+        await tx.workspaceTab.deleteMany({ 
+          where: { workspaceId: { in: workspaceIds } } 
+        });
+      }
+
+      // 3. Xóa Workspace
+      await tx.workspace.deleteMany({ where: { userId: id } });
+
+      // 4. Cuối cùng, khi không còn gì vướng bận, xóa User
+      await tx.user.delete({ where: { id } });
+    });
+
+    res.status(200).json({ message: "Đã xóa vĩnh viễn người dùng và toàn bộ dữ liệu." });
   } catch (error) {
     console.error("Lỗi xóa User:", error);
-    res.status(500).json({ error: "Lỗi khi xóa người dùng." });
+    res.status(500).json({ error: "Lỗi hệ thống khi xóa người dùng." });
   }
 };
 
