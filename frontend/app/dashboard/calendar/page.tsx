@@ -140,7 +140,7 @@ export default function CalendarPage() {
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-black text-gray-900 flex items-center">
-            <CalendarIcon className="mr-3 text-blue-600" size={32} /> Lịch trình công việc
+            <CalendarIcon className="mr-3 text-blue-600" size={32} /> Lịch trình 
           </h1>
           <p className="text-sm text-gray-500 mt-1">Theo dõi hạn chót và quản lý thời gian hiệu quả.</p>
         </div>

@@ -107,7 +107,7 @@ export default function DashboardOverviewPage() {
 
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between group">
           <div>
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Công việc (Tasks)</p>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Công việc</p>
             <h3 className="text-3xl font-black text-gray-800 group-hover:text-green-600 transition-colors">{data.stats.tasks.total}</h3>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center"><CheckSquare size={26} /></div>
@@ -123,7 +123,7 @@ export default function DashboardOverviewPage() {
 
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between group">
           <div>
-            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Không gian (WS)</p>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Không gian</p>
             <h3 className="text-3xl font-black text-gray-800 group-hover:text-purple-600 transition-colors">{data.stats.workspaces}</h3>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center"><Briefcase size={26} /></div>
