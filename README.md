@@ -1,164 +1,64 @@
-# 🚀 OmniDash - Personal Productivity & Lifestyle OS
+# 🚀 OmniDash - Workspace Automation & Task Management
 
-OmniDash là một nền tảng quản lý năng suất cá nhân đa ngữ cảnh (Work - Life - Chill), giúp người dùng tổ chức công việc, ghi chú và quản lý môi trường làm việc số một cách thông minh, tập trung và hiệu quả.
-
----
-
-## 📌 Mục tiêu dự án
-
-- Tạo một **Digital Hub** thống nhất cho mọi hoạt động số
-- Giảm phân tán giữa các công cụ (tabs, tasks, notes)
-- Tăng năng suất cá nhân bằng AI & automation
-- Cung cấp trải nghiệm **context-based workflow**
+**OmniDash** là một hệ thống quản lý công việc và tự động hóa không gian làm việc, được xây dựng theo kiến trúc Nguyên khối phân lớp (Layered Monolith). Hệ thống kết hợp giữa Web Application và Browser Extension giúp người dùng lưu trữ công việc và khởi tạo môi trường làm việc (mở hàng loạt tab trình duyệt) chỉ với một cú nhấp chuột.
 
 ---
 
-## ✨ Tính năng chính
+## ✨ Tính năng nổi bật (Key Features)
 
-### 🧠 1. Workspace Combos
-- Gom nhóm nhiều URL thành một workspace
-- Mở toàn bộ tabs chỉ với 1 click (qua Extension)
-- Phù hợp cho học tập, làm việc, giải trí
-
-### 📋 2. Task Management
-- CRUD tasks
-- Hỗ trợ:
-  - Kanban
-  - List
-  - Calendar
-- Hỗ trợ task cha - con (hierarchy)
-
-### 🔄 3. Context Switching
-- Chuyển đổi nhanh giữa:
-  - Work 💼
-  - Personal 🏠
-  - Chill 🎮
-- Dashboard thay đổi theo context
-
-### 🤖 4. AI Assistant
-- Tự động phân rã task lớn thành subtask
-- Semantic search trong notes
-- Hỗ trợ tối ưu workflow
-
-### 📝 5. Knowledge Hub
-- Ghi chú bằng Markdown
-- Tagging system
-- Quản lý tri thức cá nhân
+- **🔐 Xác thực bảo mật:** Đăng nhập, đăng ký an toàn với JWT (JSON Web Token) và mật khẩu được băm bằng bcrypt.
+- **📝 Quản lý công việc (Task Management):** Thêm, sửa, xóa và đánh dấu hoàn thành công việc. Gắn kết công việc với từng Không gian làm việc cụ thể.
+- **🗂️ Quản lý Không gian làm việc (Workspace Combos):** Tạo các nhóm tài nguyên (URLs) phục vụ cho từng mục đích công việc.
+- **⚡ Tự động hóa trình duyệt (Browser Automation):** Giao tiếp bảo mật (Message Passing) giữa Web và Extension để tự động mở hàng loạt trang web mà không bị trình duyệt chặn (Pop-up block).
+- **🎨 Giao diện tối giản (Minimalist UI):** Thiết kế trực quan, thân thiện, lấy sự tập trung của người dùng làm trung tâm.
 
 ---
 
-## 🏗️ Kiến trúc hệ thống
+## 🛠️ Công nghệ sử dụng (Tech Stack)
 
-### 🔹 Modular Layered Architecture
+### Frontend (Web Client)
+- **Framework:** Next.js (React)
+- **Ngôn ngữ:** TypeScript
+- **Styling:** Tailwind CSS
+- **Quản lý trạng thái:** Zustand
 
----
+### Backend (API Server)
+- **Môi trường:** Node.js
+- **Framework:** Express.js
+- **Kiến trúc:** Layered Monolith (Controller - Service - Repository)
+- **Bảo mật:** JWT, bcrypt
 
-## 🛠️ Tech Stack
+### Database (Cơ sở dữ liệu)
+- **Hệ quản trị:** PostgreSQL
+- **ORM:** Prisma Client
 
-### Frontend
-- Next.js (React)
-- Tailwind CSS
-- Zustand (State Management)
-
-### Backend
-- Node.js
-- Express.js
-
-### Database
-- PostgreSQL
-- Prisma ORM
-
-### AI Integration
-- Gemini API
-
-### Extension
-- Chrome Extension (Manifest V3)
+### Browser Extension
+- **Chuẩn phát triển:** Manifest V3 (Chrome Extension API)
+- **Giao tiếp:** `window.postMessage`, `chrome.runtime`, `chrome.tabs`
 
 ---
 
-## 📊 Database Design (Overview)
+## ⚙️ Hướng dẫn cài đặt (Installation & Setup)
 
-### 👤 Users & Preferences
-- `users`
-- `user_preferences`
+### Yêu cầu hệ thống (Prerequisites)
+- [Node.js](https://nodejs.org/) (Phiên bản LTS)
+- [PostgreSQL](https://www.postgresql.org/) (Đang chạy ở cổng 5432)
+- Trình duyệt Google Chrome, Edge hoặc Brave.
 
-### 📂 Workspace
-- `workspaces`
-- `workspace_resources`
-- `notes`
-
-### ⚡ Productivity
-- `tasks`
-- `ai_usage_logs`
-- `productivity_metrics`
-
----
-
-## 📈 Non-Functional Requirements
-
-- ⚡ Performance: load < 1.5s
-- 🔒 Security: AES-256 + HTTPS
-- 🟢 Uptime: ≥ 99.5%
-- 🎯 UX: Minimalist + context switching < 500ms
-
----
-
-## 🔌 Tích hợp hệ thống
-
-- Web App ↔ Browser Extension
-- AI Service (Gemini API)
-- RESTful API
-
----
-
-## 👥 Actors
-
-- **User**: quản lý công việc & workspace
-- **Admin**: quản lý hệ thống & AI config
-- **AI Service**: xử lý thông minh
-- **Browser Extension**: mở tabs & workspace
-
----
-
-## 🧪 Scaling Targets
-
-| Entity               | Target       |
-|---------------------|-------------|
-| Users               | 1,000+      |
-| Tasks               | 50,000+     |
-| Workspace Resources | 15,000+     |
-| AI Logs             | 20,000+     |
-
----
-
-## 🚧 Roadmap (Gợi ý phát triển)
-
-- [ ] Authentication (JWT / OAuth)
-- [ ] Real-time sync (WebSocket)
-- [ ] AI nâng cao (goal planning)
-- [ ] Mobile app (Flutter)
-- [ ] Analytics Dashboard
-- [ ] Plugin system (Widget mở rộng)
-
----
-
-## 📷 Demo (Optional)
-
-> Thêm ảnh hoặc GIF demo tại đây
-
----
-
-## ⚙️ Cài đặt & chạy dự án
+### Cài đặt Cơ sở dữ liệu và Backend
+Mở terminal và di chuyển vào thư mục `backend`:
 
 ```bash
-# Clone repo
-git clone https://github.com/your-username/omnidash.git
+cd backend
 
-# Cài dependencies
+# Cài đặt thư viện
 npm install
 
-# Chạy backend
-npm run server
+# Tạo file .env dựa trên file .env.example
+cp .env.example .env
 
-# Chạy frontend
+# Chạy Prisma migration để tạo bảng trong PostgreSQL
+npx prisma migrate dev --name init
+
+# Khởi chạy server Backend (Mặc định: http://localhost:5000)
 npm run dev
